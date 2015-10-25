@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<!DOCTYPE web-app 
+    PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN" 
+    "http://java.sun.com/dtd/web-app_2_3.dtd">
+
+ <web-app>
+   <display-name>Channel Subscription Servlets</display-name>
+   <context-param>
+     <param-name>BDBstore</param-name>
+     <param-value>database</param-value>
+   </context-param>
+    
+   <servlet>
+     <servlet-name>xpath</servlet-name>
+     <servlet-class>edu.upenn.cis455.servlet.XPathServlet</servlet-class> 
+   </servlet>
+   <servlet>
+     <servlet-name>firstpage</servlet-name>
+     <servlet-class>edu.upenn.cis455.servlet.FirstPage</servlet-class> 
+   </servlet>
+   <servlet>
+     <servlet-name>welcomepage</servlet-name>
+     <servlet-class>edu.upenn.cis455.servlet.WelcomePage</servlet-class> 
+   </servlet>
+   <servlet>
+     <servlet-name>logoutservlet</servlet-name>
+     <servlet-class>edu.upenn.cis455.servlet.LogoutServlet</servlet-class> 
+   </servlet>
+   <servlet>
+     <servlet-name>addChannel</servlet-name>
+     <servlet-class>edu.upenn.cis455.servlet.AddChannelServlet</servlet-class> 
+   </servlet>
+    
+   <servlet-mapping>
+     <servlet-name>xpath</servlet-name>
+     <url-pattern>/xpath</url-pattern>
+   </servlet-mapping>  
+   <servlet-mapping>
+     <servlet-name>firstpage</servlet-name>
+     <url-pattern>/firstpage</url-pattern>
+   </servlet-mapping> 
+   <servlet-mapping>
+     <servlet-name>welcomepage</servlet-name>
+     <url-pattern>/welcome</url-pattern>
+   </servlet-mapping> 
+   <servlet-mapping>
+     <servlet-name>logoutservlet</servlet-name>
+     <url-pattern>/logout</url-pattern>
+   </servlet-mapping> 
+   <servlet-mapping>
+     <servlet-name>addChannel</servlet-name>
+     <url-pattern>/addChannel</url-pattern>
+   </servlet-mapping>   
+
+   <!-- add any additional servlets and servlet mappings here -->
+
+</web-app>
