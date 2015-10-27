@@ -1,0 +1,21 @@
+start worker thread for crawling. [from background thread]
+----files end----
+user saved
+http://foo.com file saved.
+user saved
+user saved
+user saved
+https://foo.com file saved.
+user saved
+https://foo.com file saved.
+user saved
+https://ftoo.com file saved.
+user saved
+https://ftoo.com file saved.
+user saved
+https://ftoo.com file saved.
+user saved
+user saved
+https://ftoo.com file saved.
+user saved
+sports: /china/cba/yao	/nba/rockets/beard	

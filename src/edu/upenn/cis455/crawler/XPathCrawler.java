@@ -4,8 +4,11 @@ import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.Queue;
 
+import org.apache.log4j.Logger;
+
 
 public class XPathCrawler {
+	static final Logger logger = Logger.getLogger(XPathCrawler.class);
 	public static Queue<String> frontier = new LinkedList<String>();
 	public static boolean isAllowed(String url){
 		return false;
@@ -23,7 +26,7 @@ public class XPathCrawler {
 		String startURL = args[0];
 		String envDirectory = args[1];
 		String maxSize = args[2];
-		int size = Integer.parseInt(maxSize);
+		int size = Integer.parseInt(maxSize); 
 		//String startURL = "https://dbappserv.cis.upenn.edu/crawltest.html";
 		//String startURL = "http://www.cis.upenn.edu/prospective-students/index.php";
 		//String envDirectory = "/usr/share/jetty/database";
@@ -32,7 +35,7 @@ public class XPathCrawler {
 		CrawlerWorker worker = new CrawlerWorker(frontier, size, envDirectory);
 		Thread workerThread = new Thread(worker);
 		
-		System.out.println("start worker thread for crawling. [from background thread]");
+		logger.info("start worker thread for crawling. [from background thread]");
 		workerThread.start();
 		
 	}

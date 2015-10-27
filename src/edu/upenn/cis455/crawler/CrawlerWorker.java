@@ -27,12 +27,16 @@ import java.net.HttpURLConnection;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.apache.commons.io.input.ReaderInputStream;
+import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.tidy.Tidy;
 //import org.w3c.tidy.Node;
+
+
 
 
 import edu.upenn.cis455.crawler.info.RobotsTxtInfo;
@@ -43,6 +47,7 @@ import edu.upenn.cis455.xpathengine.XPathEngine;
 import edu.upenn.cis455.xpathengine.XPathEngineFactory;
 
 public class CrawlerWorker extends Thread{
+	static final Logger logger = Logger.getLogger(CrawlerWorker.class);
 	private final Queue<String> frontier;
 	//private String startURL;
 	private int maxSize;
@@ -98,18 +103,18 @@ public class CrawlerWorker extends Thread{
 		String response;
 		boolean b;
 		response = br.readLine();
-		System.out.println("status line: "+response);
+		logger.debug("status line: "+response);
 		if(response.equals("HTTP/1.1 200 OK")){
 			b = true;
 		}
 		else if(response.contains("301")){
-			System.out.println("encounter url redirect");
+			logger.info("encounter url redirect");
 			headerMap = parseHeaders(br);
 			b = true;
 		}
 		else {
 			b = false;
-			System.out.println(response);
+			logger.debug(response);
 		}
 		//while((response = br.readLine()) != null){System.out.println(response);}
 		return b;
@@ -137,19 +142,19 @@ public class CrawlerWorker extends Thread{
 		//String hostname = urlInfo.getHostName();
 		//int portNum = urlInfo.getPortNo();
 		String robotsURL = "https://"+hostname+"/robots.txt";
-		System.out.println(robotsURL);
+		//System.out.println(robotsURL);
 		URL robotsurl = new URL(robotsURL);
 		HttpsURLConnection connection = (HttpsURLConnection) robotsurl.openConnection();
 		
 		connection.setRequestMethod("HEAD");
 		connection.setRequestProperty("User-Agent","cis455crawler");
 		int statusCode = connection.getResponseCode();
-		System.out.println("Robots Response code is: "+ statusCode);
+		logger.debug("Robots Response code is: "+ statusCode);
 		if(statusCode != 200) {
-			System.out.println("Does not return good response");
+			logger.info("Does not return good response");
 			return null;
 		}
-		System.out.println("Robots head check passed.");
+		logger.info("Robots head check passed.");
 		connection = (HttpsURLConnection) robotsurl.openConnection();
 		connection.setRequestMethod("GET");
 		connection.setRequestProperty("User-Agent","cis455crawler");
@@ -158,10 +163,10 @@ public class CrawlerWorker extends Thread{
 		String response;
 		//while((response = in.readLine()).trim().equals("") == false);
 		RobotsTxtInfo robotsInfo = new RobotsTxtInfo();
-		//System.out.println("----robots content-----");
-        while((response = in.readLine())!= null){
+		//logger.debug("----robots content-----");
+        while((response = in.readLine()).trim().contains("This should be ignored by your crawler")==false){
         	response.trim();
-        	//System.out.println(response);
+        	//logger.debug(response);
             if(response.startsWith("Crawl-delay")){
             	String[] strings = response.split(":");
             	robotsInfo.addCrawlDelay(strings[0].trim(), Integer.valueOf(strings[1].trim()));
@@ -178,7 +183,7 @@ public class CrawlerWorker extends Thread{
             	}
             }
         }
-        //System.out.println("---robots content end----");
+        //logger.debug("---robots content end----");
         in.close();
         return robotsInfo;
 	}
@@ -189,14 +194,14 @@ public class CrawlerWorker extends Thread{
 		BufferedReader in = new BufferedReader(new InputStreamReader(mySocket.getInputStream()));
 		StringBuffer sb = new StringBuffer("HEAD");
 		sb.append(" ").append("/robots.txt HTTP/1.1");
-		System.out.println("robots head request: "+ sb.toString());
+		logger.debug("robots head request: "+ sb.toString());
 		out.println(sb);	
 		out.println("Host: "+ hostname+":"+portNum);
 		out.println("User-Agent: cis455crawler\r\n");
-		System.out.println("----------");
+		logger.debug("----------");
 		//parseResponse(in);
 		boolean headCheck=checkHeadRequest(in);
-		System.out.println("Robots Head request is:"+ headCheck);
+		logger.debug("Robots Head request is:"+ headCheck);
 		if(headCheck == false) {
 			in.close();
 			out.close();
@@ -214,10 +219,10 @@ public class CrawlerWorker extends Thread{
 			String response;
 			//while((response = in.readLine()).trim().equals("") == false);
 			RobotsTxtInfo robotsInfo = new RobotsTxtInfo();
-			System.out.println("----robots content-----");
-	        while((response = in.readLine())!= null){
+			//logger.debug("----robots content-----");
+	        while((response = in.readLine()).trim().contains("This should be ignored by your crawler")==false){
 	        	response.trim();
-	        	System.out.println(response);
+	        	//logger.debug(response);
 	            if(response.startsWith("Crawl-delay")){
 	            	String[] strings = response.split(":");
 	            	robotsInfo.addCrawlDelay(strings[0].trim(), Integer.valueOf(strings[1].trim()));
@@ -234,7 +239,7 @@ public class CrawlerWorker extends Thread{
 	            	}
 	            }
 	        }
-	        System.out.println("----robots end-----");
+	        //logger.debug("----robots end-----");
 	        in.close();
 	        out.close();
 	        mySocket.close();
@@ -254,12 +259,12 @@ public class CrawlerWorker extends Thread{
 		String hostname = urlInfo.getHostName();
 		int portNum = urlInfo.getPortNo();
 		String filePath = urlInfo.getFilePath();
-		System.out.println("Hostname: "+hostname);
-		System.out.println("portNum: "+ portNum);
-		System.out.println("filepath: " + filePath);
+		logger.debug("Hostname: "+hostname);
+		logger.debug("portNum: "+ portNum);
+		logger.debug("filepath: " + filePath);
 		RobotsTxtInfo robotsInfo = processRobots("http://", hostname, portNum);
 		if(robotsInfo == null){
-			System.out.println("Cannot visit robots.txt information, ignore.");
+			logger.info("Cannot visit robots.txt information, ignore.");
 			return null;
 		}
 		else{
@@ -267,9 +272,13 @@ public class CrawlerWorker extends Thread{
 			if(check == false) return null;
 		}
 		ArrayList<String> disallow = robotsInfo.getDisallowedLinks("Disallow");
-		if(disallow.contains(filePath)){
-			System.out.println("The url is disallowed by this site..");
-			return null;
+		for(String s: disallow){
+			if(filePath.startsWith(s)){
+				logger.debug(filePath);
+				logger.debug(s);
+				logger.info("The url is disallowed by this site..");
+				return null;
+			}
 		}
 		Socket mySocket = new Socket(hostname, portNum);
 		PrintWriter out = new PrintWriter(mySocket.getOutputStream(),true);
@@ -280,14 +289,14 @@ public class CrawlerWorker extends Thread{
 			//in = new BufferedReader(new InputStreamReader(mySocket.getInputStream()));
 			StringBuffer sb = new StringBuffer("HEAD");
 			sb.append(" ").append(filePath).append(" HTTP/1.1");
-			System.out.println("head request: "+ sb.toString());
+			logger.debug("head request: "+ sb.toString());
 			out.println(sb);	
 			out.println("Host: "+ hostname+":"+portNum);
 			out.println("User-Agent: cis455crawler\r\n");
-			System.out.println("----------");
+			logger.debug("----------");
 			//parseResponse(in);
 			boolean headCheck=checkHeadRequest(in);
-			System.out.println("Head request is:"+ headCheck);
+			logger.debug("Head request is:"+ headCheck);
 			if(headCheck == false) {
 				in.close();
 				out.close();
@@ -300,21 +309,21 @@ public class CrawlerWorker extends Thread{
 				hostname = urlInfo.getHostName();
 				portNum = urlInfo.getPortNo();
 				filePath = urlInfo.getFilePath();
-				System.out.println("----redirect link------");
-				System.out.println("Hostname: "+hostname);
-				System.out.println("portNum: "+ portNum);
-				System.out.println("filepath: " + filePath);
+				logger.debug("----redirect link------");
+				logger.debug("Hostname: "+hostname);
+				logger.debug("portNum: "+ portNum);
+				logger.debug("filepath: " + filePath);
 				sb = new StringBuffer("HEAD");
 				sb.append(" ").append(filePath).append(" HTTP/1.1");
-				System.out.println("head request: "+ sb.toString());
+				logger.debug("head request: "+ sb.toString());
 				out.println(sb);	
 				out.println("Host: "+ hostname+":"+portNum);
 				out.println("User-Agent: cis455crawler\r\n");
-				System.out.println("----------");
+				logger.debug("----------");
 				//parseResponse(in);
 				in = new BufferedReader(new InputStreamReader(mySocket.getInputStream()));
 				headCheck=checkHeadRequest(in);
-				System.out.println("Head request is:"+ headCheck);
+				logger.debug("Head request is:"+ headCheck);
 				if(headCheck == false) {
 					in.close();
 					out.close();
@@ -322,17 +331,17 @@ public class CrawlerWorker extends Thread{
 					return null;
 				}
 			}
-			System.out.println("----Headers----");
+			logger.debug("----Headers----");
 			setHeaderMap(parseHeaders(in));
 			//print headers for test
 			
 			for(String key: headerMap.keySet()){
-				System.out.println(key+":"+headerMap.get(key));
+				logger.debug(key+":"+headerMap.get(key));
 			}
 			if(headerMap.containsKey("Content-Type")){
 				String type = headerMap.get("Content-Type").trim();
 				if(type.contains("/html")==false && type.contains("/xml")==false){
-					System.out.println(url+" is not html or xml file");
+					logger.info(url+" is not html or xml file");
 					in.close();
 					out.close();
 					mySocket.close();
@@ -340,7 +349,7 @@ public class CrawlerWorker extends Thread{
 				}
 			}
 			else{
-				System.out.println("no content type in the header");
+				logger.info("no content type in the header");
 				in.close();
 				out.close();
 				mySocket.close();
@@ -350,7 +359,7 @@ public class CrawlerWorker extends Thread{
 				String length = headerMap.get("Content-Length").trim();
 				int contentLength = Integer.parseInt(length);
 				if (contentLength > maxSize){
-					System.out.println("file bigger than maximum size.");
+					logger.info("file bigger than maximum size.");
 					in.close();
 					out.close();
 					mySocket.close();
@@ -373,29 +382,29 @@ public class CrawlerWorker extends Thread{
 			}
 			boolean isDuplicated = isDuplicate(url);
 			if(isDuplicated == true){
-				System.out.println(url+": No Modified");
+				logger.debug(url+": No Modified");
 				String content = readDocContentByLink(url);
-				System.out.println("Content: "+content);
+				logger.debug("Content: "+content);
 				updateDB = false;
 				in.close();
 				out.close();
 				mySocket.close();
 				return content;
 			}
-			System.out.println("----------");
+			logger.debug("----------");
 			
-			in = new BufferedReader(new InputStreamReader(mySocket.getInputStream()));
+			in = new BufferedReader(new InputStreamReader(mySocket.getInputStream(),"UTF-8"));
 			sb = new StringBuffer("GET");
 			sb.append(" ").append(filePath).append(" HTTP/1.1");
 			out.println(sb);
 			out.println("Host: "+ hostname+":"+portNum);
 			out.println("User-Agent: cis455crawler\r\n");
-			System.out.println("----------");
+			logger.debug("----------");
 			String content = parseResponse(in);
 			in.close();
 			out.close();
 			mySocket.close();
-			System.out.println("Download completed.");
+			logger.info("Download completed.");
 			return content;
 		}
 		else {
@@ -414,9 +423,13 @@ public class CrawlerWorker extends Thread{
 		RobotsTxtInfo rti = HTTPSprocessRobots(hostname);
 		if(rti == null) return null;
 		ArrayList<String> disallow = rti.getDisallowedLinks("Disallow");
-		if(disallow.contains(filePath)){
-			System.out.println("The url is disallowed by this site..");
-			return null;
+		for(String s: disallow){
+			if(filePath.startsWith(s)){
+				logger.debug(filePath);
+				logger.debug(s);
+				logger.info("The url is disallowed by this site..");
+				return null;
+			}
 		}
 		//System.out.println(str);
 		URL url = new URL(str);
@@ -425,13 +438,13 @@ public class CrawlerWorker extends Thread{
 		connection.setRequestMethod("HEAD");
 		connection.setRequestProperty("User-Agent","cis455crawler");
 		int statusCode = connection.getResponseCode();
-		System.out.println("Response code is: "+ statusCode);
+		logger.debug("Response code is: "+ statusCode);
 		if(statusCode != 200 && statusCode != 301) {
-			System.out.println("Does not return good response");
+			logger.info("Does not return good response");
 			return null;
 		}
 		else if(statusCode == 301){
-			System.out.println("Encountered url redirect");
+			logger.info("Encountered url redirect");
 			str = connection.getHeaderField("Location");
 			url = new URL(str);
 			con = (HttpURLConnection) url.openConnection();
@@ -440,28 +453,28 @@ public class CrawlerWorker extends Thread{
 			connection.setRequestProperty("User-Agent","cis455crawler");
 			statusCode = connection.getResponseCode();
 			if(statusCode != 200){
-				System.out.println("Does not return good response.");
+				logger.info("Does not return good response.");
 				return null;
 			}
 		}
-		System.out.println("head check passed.");
+		logger.info("head check passed.");
 		
 		int contentLength = connection.getContentLength();
 		String contentType = connection.getContentType().trim();
 		long lastModified = connection.getLastModified();
 		if(contentType != null){
 			if(contentType.contains("/html")==false && contentType.contains("/xml")==false){
-				System.out.println(url+" is not html or xml file");
+				logger.info(url+" is not html or xml file");
 				return null;
 			}
 		}
 		else{
-			System.out.println("no content type in the header");
+			logger.info("no content type in the header");
 			return null;
 		}
 		if(Integer.valueOf(contentLength) != null){
 			if (contentLength > maxSize){
-				System.out.println("file bigger than maximum size.");
+				logger.info("file bigger than maximum size.");
 				setLengthCheckedFlag(true);
 				return null;
 			}
@@ -481,13 +494,13 @@ public class CrawlerWorker extends Thread{
 			updateDB = false;
 			return inputstream;
 		}
-		System.out.println("----------");
-		System.out.println(str+": Downloading");
+		logger.debug("----------");
+		logger.debug(str+": Downloading");
 		connection = (HttpsURLConnection) url.openConnection();
 		connection.setRequestMethod("GET");
 		connection.setRequestProperty("User-Agent","cis455crawler");
 		//in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-		System.out.println("Download completed.");
+		logger.info("Download completed.");
 		return connection.getInputStream();
 	}
 	private Set<String> extractLinks(Node document){
@@ -614,35 +627,40 @@ public class CrawlerWorker extends Thread{
 		//System.out.println("Environment path: "+ envDirectory);
 		long lastCrawled = dbWrapper.readDocTimeByLink(link);
 		if(lastCrawled == -1){
-			System.out.println("link has not been crawled yet.");
+			logger.info("link has not been crawled yet.");
 			return false;
 		}
 		else{
 			String lastModified = headerMap.get("Last-Modified");
 			Long last = Long.valueOf(lastModified);
 			if(last.longValue() == 0){
-				System.out.println("last modified time unknown, continue downloading...");
+				logger.info("last modified time unknown, continue downloading...");
 				return false;
 			}
 			else if(last.longValue()>lastCrawled){
-				System.out.println("The file has been modified after last crawling, continue downloading...");
+				logger.info("The file has been modified after last crawling, continue downloading...");
 				return false;
 			}
 			else{
-				System.out.println("The file stays the same after last crawling.");
+				logger.info("The file stays the same after last crawling.");
 				return true;
 			}
 		}
 	}
 	public void run(){
-		DBWrapper dbWrapper = new DBWrapper(envDirectory);
-		Set<String> allChannels = dbWrapper.readAllChannel();
-		for(String channel: allChannels){
-			String[] allXpath = dbWrapper.readXPathByChannelName(channel);
-			while(frontier.isEmpty()==false){
-				System.out.println("---------");
+		//logger.info("----files in DB-----");
+		//DBWrapper db = new DBWrapper(envDirectory);
+		//db.readAllFile();
+		logger.info("----files end----");
+		while(frontier.isEmpty()==false){
+			String url = frontier.remove();
+			DBWrapper dbWrapper = new DBWrapper(envDirectory);
+			Set<String> allChannels = dbWrapper.readAllChannel();
+			for(String channel: allChannels){
+				logger.info("channel:"+ channel);
+				String[] allXpath = dbWrapper.readXPathByChannelName(channel);
+				logger.debug("---------");
 				updateDB = true;
-				String url = frontier.remove();
 				//System.out.println(url);
 				String content;
 				InputStream is;
@@ -651,9 +669,12 @@ public class CrawlerWorker extends Thread{
 					try {
 						content = downloadHTTP(url);
 						if(content == null) continue;
-						if(updateDB == true) storeFile(url,content);
+						if(updateDB == true) {
+							storeFile(url,content);
+						}
 						if(headerMap.get("Content-Type").contains("/xml")){
-							DOMReadXML drx = new DOMReadXML(url);
+							is = new ByteArrayInputStream(content.getBytes());
+							DOMReadXML drx = new DOMReadXML(is);
 							doc = drx.readXML();
 						}
 						else{
@@ -672,16 +693,22 @@ public class CrawlerWorker extends Thread{
 						//InputStream is2 = is;
 						if(is == null) continue;
 						if(updateDB == true) {
-							BufferedReader br = new BufferedReader(new InputStreamReader(is));
+							
+							BufferedReader br = new BufferedReader(new InputStreamReader(is,"UTF-8"));
 							StringBuffer sb = new StringBuffer();
 							String line;
 							while((line = br.readLine())!=null){
 								sb.append(line);
 							}
 							content = sb.toString();
-							storeFile(url,content);
+							
+							//logger.debug("-----");
+							//logger.debug(content);
+							//logger.debug("-----");
+							//storeFile(url,content);
 							is = new ByteArrayInputStream(content.getBytes());
 						}
+						//ReaderInputStream ris = new ReaderInputStream(new InputStreamReader(is,"UTF-8"));
 						if(headerMap.get("Content-Type").contains("/xml")){
 							DOMReadXML drx = new DOMReadXML(url);
 							doc = drx.readXML();
@@ -697,11 +724,11 @@ public class CrawlerWorker extends Thread{
 				}
 				else continue;
 				if(doc == null) break;
-				System.out.println("String converted to DOM.");
-				System.out.println("----------");
+				logger.info("String converted to DOM.");
+				logger.debug("----------");
 				if(headerMap.get("Content-Type").contains("html")){
-					System.out.println("This is a HTML file");
-					System.out.println("Start extracting urls in file");
+					logger.debug("This is a HTML file");
+					logger.debug("Start extracting urls in file");
 					Set<String> links = extractLinks(doc);
 					links = normalizeLinks(links, url);
 					/*
@@ -715,24 +742,25 @@ public class CrawlerWorker extends Thread{
 					}
 				}
 				else{
-					System.out.println("This is a XML file, start matching...");
+					logger.debug("This is a XML file, start matching...");
 					XPathEngine xe = XPathEngineFactory.getXPathEngine();
 					xe.setXPaths(allXpath);
 					boolean[] isMatch = xe.evaluate(doc);
 					for(int i = 0; i<isMatch.length;i++){
 						if(isMatch[i] == true){
+							logger.info("[SUCCESS]document matches "+ allXpath[i]);
 							dbWrapper.updateXpath(allXpath[i],url);
-							dbWrapper.updateChannel(channel, allXpath[i]);
+							//dbWrapper.updateChannel(channel, allXpath[i]);
 						}
 						else{
-							//dbWrapper.deletaXpath(allXpath[i],url);
+							dbWrapper.deletaXpath(allXpath[i],url);
 						}
 					}
 				}
 				
-				System.out.println("----files in DB-----");
-				DBWrapper db = new DBWrapper(envDirectory);
-				db.readAllFile();
+				//logger.info("----files in DB-----");
+				//DBWrapper db = new DBWrapper(envDirectory);
+				//db.readAllFile();
 			}
 		}
 	}

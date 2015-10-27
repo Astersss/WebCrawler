@@ -12,6 +12,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
@@ -19,6 +20,7 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.helpers.DefaultHandler;
 
 public class XPathEngineImpl implements XPathEngine {
+	static final Logger logger = Logger.getLogger(XPathEngineImpl.class);
 	private String[] queries;
 	private boolean[] isMatch;
 	private static List<Node> lastMatch;
@@ -218,17 +220,20 @@ public class XPathEngineImpl implements XPathEngine {
 				isMatch[i] = evaluate(d,queries[i]);
 			}
 		}
-		System.out.println("evaluate results");
-		for(boolean b: isMatch)System.out.println(b);
-		System.out.println("matched nodes:");
-		for(Node n: lastMatch) System.out.println(n.getNodeName());
+		logger.info("evaluate results");
+		int i = 0;
+		for(boolean b: isMatch){
+			logger.info(queries[i]+": "+ b);
+		}
+		logger.debug("matched nodes:");
+		for(Node n: lastMatch) logger.debug(n.getNodeName());
 		return isMatch; 
 	}
 	
 	private boolean evaluate(Document doc, String query){
 		
 		Deque<String> deque = parseQuery(query);
-        System.out.println("deque's size: "+deque.size());
+        logger.debug("deque's size: "+deque.size());
         //printDeque(deque);
         lastMatch = new CopyOnWriteArrayList<Node>();
         lastMatch.add(doc);
@@ -254,34 +259,40 @@ public class XPathEngineImpl implements XPathEngine {
     }
     */
 	
-    private boolean checkNextLevel(Node d, Queue<String> queue, String nodeName){
-        boolean b = false;
-        //System.out.println(d.getNodeName());
-        //System.out.println(nodeName);
-        //System.out.println("Last Match size:"+ XMLparser.lastMatch.size());
+    private void checkNextLevel(Node d, Deque<String> queue, String nodeName){
         nodeName = removeWhiteSpace(nodeName);
-        for(Node n: lastMatch) System.out.println(n.getNodeName());
         if(d.hasChildNodes()){
             NodeList nodelist = d.getChildNodes();
             for(int i = 0; i<nodelist.getLength();i++){
                 Node child = nodelist.item(i);
-                System.out.println(child.getNodeName()+"\t"+child.getNodeValue()+"\t"+child.getNodeType());
+                //logger.debug("---child node under "+d.getNodeName()+" ----");
+                //logger.debug(child.getNodeName()+"\t"+child.getNodeValue()+"\t"+child.getNodeType());
+                //logger.debug("----------");
                 if(child.getNodeType()==Node.ELEMENT_NODE && child.getNodeName().equals(nodeName)){
                     if(queue.isEmpty() == true) {
                         lastMatch.add(child);
+                        //logger.debug("find "+ nodeName+" under "+ d.getNodeName());
                         //return true;
                     }
                     else{
-                        b = checkNextLevel(child,queue, queue.remove());
-                        if(b==true) return b;
+                    	String nextNodeName = queue.removeFirst();
+                        checkNextLevel(child,queue, nextNodeName);
+                        queue.addFirst(nextNodeName);
+                        //logger.info("back up peek:" + backup.peek());
+                        //queue = backup;
+                        //logger.info("next level:"+queue.peek());
+                        //logger.debug("element in queue"+ queue.peek());
+                        //if(b==true) return b;
                     }
                 }
             }
         }
         //System.out.println("lastMatch size:"+ XMLparser.lastMatch.size());
-        for(Node n: lastMatch) System.out.println("current last node:"+ n.getNodeName());
-        if(lastMatch.size()!= 0) return true;
-        else return false;
+        //if(lastMatch.size()!=0){
+        	//for(Node n: lastMatch) logger.debug("current matched node:"+ n.getNodeName());
+        	//return true;
+        //}
+        //else return false;
     }
     
     private Deque<String> parseQuery(String query){
@@ -314,45 +325,56 @@ public class XPathEngineImpl implements XPathEngine {
     }
     
     private boolean matchQuery(List<Node> lastMatchedNodes,Deque<String> deque){
-        System.out.println("enter matchQuery");
+    	logger.debug("enter matchQuery");
         boolean b =false;
         List<Node> tmpRoot = lastMatchedNodes;
-        for(Node n: tmpRoot) System.out.println("current node: "+n.getNodeName());
+        //for(Node n: tmpRoot) logger.debug("current node: "+n.getNodeName());
         lastMatch = new CopyOnWriteArrayList<Node>();
+        //for(Node tmpNode: tmpRoot){
+        //logger.debug("tmpNode name: "+ tmpNode.getNodeName());	
         while(deque.size()!=0){
             String subQuery = deque.removeFirst();
-            System.out.println("subQuery:"+ subQuery);
+            logger.debug("subQuery:"+ subQuery);
             if(subQuery.charAt(0) == '/'){
                 String[] nodes = subQuery.substring(1).split("/");
-                Queue<String> queue = new LinkedList<String>();
+                Deque<String> queue = new LinkedList<String>();
                 for(String s: nodes) {
-                    System.out.println(s);
+                	logger.debug("step nodes: "+ s);
                     queue.add(s);
                 }
+                logger.debug("step nodes added to queue");
+                
                 Iterator<Node> iter = tmpRoot.iterator();
                 while(iter.hasNext()){
                     Node root = iter.next();
-                    Queue<String> tmpQueue = queue;
-                    checkNextLevel(root,tmpQueue,tmpQueue.remove());
+                    Deque<String> tmpQueue = queue;
+                    String nodeName = tmpQueue.removeFirst();
+                    checkNextLevel(root,tmpQueue,nodeName);
                 }
+                
+                //String nodeName = queue.removeFirst();
+                //checkNextLevel(tmpNode,queue,nodeName);
                 if(lastMatch.size() == 0) return false;
-                else tmpRoot = lastMatch;
+                else {
+                	for(Node n: lastMatch) logger.debug("current matched node:"+n.getNodeName());
+                	tmpRoot = lastMatch;
+                }
             }
             else if(subQuery.charAt(0) == '['){
             	tmpRoot = lastMatch;
                 String test = subQuery.substring(1,subQuery.length()-1);
                 Deque<String> testDeque = parseQuery(test);
-                System.out.println(test+"'s deque:");
+                //logger.debug(test+"'s deque:");
                 //printDeque(testDeque);
                 //System.out.println(testDeque.getFirst());
                 boolean ab = matchQuery(tmpRoot,testDeque);
-                if(ab == true) lastMatch = tmpRoot;
+                //if(ab == true) lastMatch = tmpRoot;
             }
             else if(subQuery.matches("\\s*t\\s*e\\s*x\\s*t\\s*\\(\\)\\s*=\\s*\".*\"\\s*")){
-                System.out.println("test query is: "+ subQuery);
+                logger.debug("test query is: "+ subQuery);
                 int index = subQuery.indexOf("\"");
                 String textContent = subQuery.substring(index+1, subQuery.length()-1);
-                System.out.println("Text contet is: "+ textContent);
+                logger.debug("Text contet is: "+ textContent);
                 for(Node node:tmpRoot){
                     if(node.hasChildNodes()){
                         NodeList nl = node.getChildNodes();
@@ -368,16 +390,17 @@ public class XPathEngineImpl implements XPathEngine {
                 }
             }
             else if(subQuery.matches("\\s*c\\s*o\\s*n\\s*t\\s*a\\s*i\\s*n\\s*s\\s*\\(\\s*t\\s*e\\s*x\\s*t\\s*\\(\\)\\s*,\\s*\".*\"\\s*\\)\\s*")){
-                System.out.println("test query is: "+ subQuery);
+            	logger.debug("test query is: "+ subQuery);
                 int index = subQuery.indexOf("\"");
                 String textContent = subQuery.substring(index+1, subQuery.length()-2);
-                System.out.println("Text contet is: "+ textContent);
+                logger.debug("Text contet is: "+ textContent);
                 for(Node node:tmpRoot){
                     if(node.hasChildNodes()){
                         NodeList nl = node.getChildNodes();
                         for(int i = 0; i<nl.getLength();i++){
                             Node subNode = nl.item(i);
                             if(subNode.getNodeType() == Node.TEXT_NODE){
+                            	logger.debug("node text is: \""+subNode.getNodeValue());
                                 if(subNode.getNodeValue().contains(textContent)){
                                     lastMatch.add(node);
                                 }
@@ -404,15 +427,17 @@ public class XPathEngineImpl implements XPathEngine {
                 String[] nodes = subQuery.split("/");
                 //for(String node:nodes)System.out.println(node);
                 //for(Node s: tmpRoot)System.out.println(s.getNodeName());
-                Queue<String> queue = new LinkedList<String>();
+                Deque<String> queue = new LinkedList<String>();
                 for(String s: nodes) {
-                    queue.add(s);
+                    queue.addLast(s);
                 }
                 for(Node root: tmpRoot){
-                    Queue<String> tmpQueue = queue;
-                    b = checkNextLevel(root,tmpQueue,tmpQueue.remove());
+                    Deque<String> tmpQueue = queue;
+                    String nodeName = tmpQueue.removeFirst();
+                    checkNextLevel(root,tmpQueue,nodeName);
                 }  
             }
+        //}
         }
         if(lastMatch.size() == 0) return false;
         else return true;

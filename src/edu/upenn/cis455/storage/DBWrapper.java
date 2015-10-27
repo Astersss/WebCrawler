@@ -7,6 +7,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
+
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
@@ -16,8 +18,9 @@ import com.sleepycat.persist.SecondaryIndex;
 import com.sleepycat.persist.StoreConfig;
 import com.sleepycat.persist.EntityStore;
 
+
 public class DBWrapper {
-	
+	static final Logger logger = Logger.getLogger(DBWrapper.class);
 	private static String envDirectory = null;
 	
 	private static Environment myEnv;
@@ -39,6 +42,7 @@ public class DBWrapper {
 		usr.setPassword(data.get("password"));
 		da.userById.put(usr);
 		myDbEnv.close();
+		logger.info("user saved");
 	}
 	public void saveFile(String url, String content, long date) throws DatabaseException{
 		myDbEnv.setup(envDirectory);
@@ -49,6 +53,7 @@ public class DBWrapper {
 		doc.setLastCrawled(date);
 		da.docById.put(doc);
 		myDbEnv.close();
+		logger.info(url + " file saved.");
 	}
 	public void updateFile(String url, String content, long date) throws DatabaseException{
 		myDbEnv.setup(envDirectory);
@@ -65,7 +70,7 @@ public class DBWrapper {
 		da = new DataAccessor(myDbEnv.getEntityStore());
 		EntityCursor<RetrievedDocs> doc_cursor = da.docById.entities();
 		for(RetrievedDocs doc: doc_cursor){
-			System.out.println(doc.getDocId()+" "+ doc.getUrl()+" "+ doc.getContent()+" "+doc.getLastCrawled());
+			logger.debug(doc.getDocId()+" "+ doc.getUrl()+" "+ doc.getContent()+" "+doc.getLastCrawled());
 		}
 		doc_cursor.close();
 		myDbEnv.close();
@@ -96,7 +101,7 @@ public class DBWrapper {
 		da = new DataAccessor(myDbEnv.getEntityStore());
 		EntityCursor<Users> usr_cursor = da.userById.entities();
 		for(Users usr: usr_cursor){
-			System.out.println(usr.getUserId()+" "+ usr.getUsername()+" "+ usr.getPassword());
+			logger.info(usr.getUserId()+" "+ usr.getUsername()+" "+ usr.getPassword());
 		}
 		usr_cursor.close();
 		myDbEnv.close();
@@ -158,11 +163,11 @@ public class DBWrapper {
 			allChannels.add(chan.getChannelName());
 			String channelname = chan.getChannelName();
 			Set<String> xpaths = chan.getXPath();
-			System.out.print(channelname+":");
+			StringBuffer sb = new StringBuffer(channelname+": ");
 			for(String xpath: xpaths){
-				System.out.print(xpath+"\t");
+				sb.append(xpath+"\t");
 			}
-			System.out.println(" ");
+			logger.debug(sb);
 		}
 		channel_cursor.close();
 		myDbEnv.close();
@@ -183,7 +188,6 @@ public class DBWrapper {
 		myDbEnv.close();
 	}
 	public void deletaXpath(String xpath, String url){
-		System.out.println("In delete xpath method: "+ xpath+", "+url);
 		myDbEnv.setup(envDirectory);
 		da = new DataAccessor(myDbEnv.getEntityStore());
 		SecondaryIndex<String, Long, RetrievedDocs> docByLink = da.docByLink;

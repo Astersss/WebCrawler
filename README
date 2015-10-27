@@ -21,6 +21,8 @@ respones will indicate fail; if any one of the queries matches the file, respons
 13, display channels with channel name, last crawled time, url location, can raw content
 14, crawler can handle both http and https link, follows the robots.txt, and can handle redirect response
 15, not sure what a .xp file is, so I included a plain text file with the results of war and peace
+16, no idea why the web page does not display exact xml document content, but in the log it can be displayed correctly
+
 Did you complete any extra-credit tasks? If so, which ones?
   (list extra-credit tasks)
 	no

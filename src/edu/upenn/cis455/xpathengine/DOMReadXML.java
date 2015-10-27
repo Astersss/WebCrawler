@@ -11,11 +11,13 @@ import org.w3c.tidy.Tidy;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
 
 public class DOMReadXML {
 	private String filePath;
+	private InputStream is;
 	
 	private static Document parseWithJTidy(String HTML) throws Exception{
 		Tidy tidy = new Tidy();
@@ -39,20 +41,19 @@ public class DOMReadXML {
 	public DOMReadXML(String path){
 		this.filePath = path;
 	}
-	
+	public DOMReadXML(InputStream is){
+		this.is = is;
+	}
 	public Document readXML(){
 		Document  doc = null;
 		try{
 			//File XMLFile = new File(filePath);
-			if(filePath.contains(".xml")){
-				DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-				DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-				doc = dBuilder.parse(filePath);
-				System.out.println("xml file converted to DOM");
-			}
-			else if(filePath.contains(".html")){
-				doc = parseWithJTidy(filePath);
-			}
+			
+			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+			if(is!=null) doc = dBuilder.parse(is);
+			else doc = dBuilder.parse(filePath);
+			System.out.println("xml file converted to DOM");
 		}catch(Exception e){
 			e.printStackTrace();
 		}
