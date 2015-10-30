@@ -34,7 +34,7 @@ public class HTTPClient {
 				out.println("\r\n");
 				parseResponse(in);
 			}
-			
+			mySocket.close();
 			
 		}catch(Exception e){
 			e.printStackTrace();
